@@ -1,0 +1,16 @@
+Package: hpcR
+Type: Package
+Title: Wrapper functions to send and receive computations from HPC using SLURM
+Version: 0.1.0
+Author: Pol van Rijn
+Maintainer: Pol van Rijn <pol.van-rijn@ae.mpg.de>
+Description: TODO More about what it does (maybe more than one line)
+    Use four spaces when indenting paragraphs within the Description.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Imports:
+    ssh,
+    stringr
+Suggests: 
+    telegram.bot

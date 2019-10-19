@@ -1,0 +1,44 @@
+---
+title: "Setting up SSH"
+output: html_notebook
+---
+
+In order to use the package you'll need ssh access with `R` installed on the server. Sometimes on hpc you can't directly ssh into your workspace, but need to chain ssh sessions. Chaining ssh sessions within the package `ssh` is not possible. This is a `R`-package we use in order to work with R over ssh. A workaround is to build a tunnel.
+
+Let's imagine the following scenario, you have your own computer (`hostA`), you can connect to your workspace (`hostB`) and only from your workspace you can connect to the hpc cluster (`hostC`). In order to setup the tunnel `hostA -> hostB -> hostC`, we'll need to do the following. Create the file `config`
+
+```{r}
+nano ~/.ssh/config
+```
+
+In many cases this file does not exist yet. Now type in the following:
+
+```{r}
+Host hostC # You could pick any name, e.g. 'Host hpc_server'
+    HostName hostC # The host name of hostC
+    User username_hostC # The username for hostC
+    IdentityFile ~/.ssh/id_rsa # We'll get to this in a sec
+    ProxyCommand ssh username_hostB@hostB -W %h:%p # this is where the magic happens ;-) You first login to hostB and then into hostC
+```
+
+The next step is to create a file containing our ssh passwords; this makes life way easier! To do so run
+
+```{r}
+ssh-keygen -t rsa -b 2048 # This creates a keygen for ssh (rsa protected)
+```
+
+Automatically the keygen is saved in `~/.ssh/id_rsa`, however you may use any other location (however, you'll need to change the location of `IdentityFile` in `~/.ssh/config`). Next, you'll be prompted to enter a password, if you just press enter, no password is used. I recommend this for scripting, because otherwise you'll need to reenter your ssh keygen password each time you run.
+
+In order to add the ssh key to the keygen run:
+
+```{r}
+ssh-copy-id username_hostB@hostB
+```
+
+Now everything is set up. Let's run the tunnel, by entering:
+
+```{r}
+ssh -L 5902:localhost:22 -N hostC
+```
+
+This creates connects `localhost` on port 5902 to `hostC` on port 22. The hostname you'll need to use in this package is therefore `username_hostB@localhost:5902`
