@@ -35,7 +35,7 @@ compute_real_params = function(l){
 }
 
 extract_fn_name = function(fn){
-  fn_name = deparse(substitute(fn))
+  fn_name = substitute(fn)
   if (length(fn_name) == 1){
     return(fn_name)
   } else{
@@ -57,6 +57,9 @@ evaluate = function(string){
 
 reindent_code = function(lines, indentation_level = 0){
   unnecessary_indent = min(stringr::str_locate(lines, "\\s+")[,"end"]) + 1
+  if (is.na(unnecessary_indent)){
+    unnecessary_indent = 0
+  }
   lines = substring(lines, unnecessary_indent)
 
   if (indentation_level != 0){
@@ -66,8 +69,43 @@ reindent_code = function(lines, indentation_level = 0){
   return(lines)
 }
 
-build_script_and_save = function(settings, fn_local_path, fn_str, real_parameters, fn_name, task_ID){
-  fn_call = paste0("saveRDS(", fn_name, "(", paste0(real_parameters, collapse = ", "), "), 'output.RDS')")
+build_script_and_save = function(settings, fn_local_path, fn_str, real_parameters, fn_name, task_ID, args){
+  # TODO use a templating engine, e.g.
+  # template_r <- readLines(system.file("templates/slurm_run_R.txt",
+  #                                     package = "rslurm"))
+  # script_r <- whisker::whisker.render(template_r, list(pkgs = pkgs,
+  #                                                      add_obj = !is.null(add_objects), nchunk = nchunk, cpus_per_node = cpus_per_node,
+  #                                                      libPaths = libPaths))
+  # writeLines(script_r, file.path(tmpdir, "slurm_run.R"))
+
+  if (settings$slurm$enabled){
+    pkgs = get_required_packages_from_code(fn_str)
+    jobname = build_jobname(fn_name, task_ID)
+    slurm_call = c("library(rslurm)")
+    if (settings$slurm$mode == 'parallel'){
+      slurm_call = c(
+        slurm_call,
+        paste("pars", names(args), sep = " = "),
+        paste0("sjob = slurm_apply(", fn_name, ", pars, jobname = '", jobname, "', nodes = ", settings$slurm$nodes, ", cpus_per_node = ", settings$slurm$cpus_per_node, ", pkgs = ", deparse(pkgs), ", slurm_options = ", deparse(settings$slurm$options), ", rscript_path = ", deparse(settings$slurm$rscript_path), ")")
+      )
+    } else if(settings$slurm$mode == 'single'){
+      # You get something like:
+      # pars = list(a = a, b = b)
+      slurm_call = c(
+        slurm_call,
+        paste0("pars = list(", paste(real_parameters, real_parameters, sep = " = ", collapse = ", "), ")"),
+        paste0("sjob = slurm_call(", fn_name, ", pars, jobname = '", jobname, "', pkgs = ", deparse(pkgs), ", slurm_options = ", deparse(settings$slurm$options), ", rscript_path = ", deparse(settings$slurm$rscript_path), ")")
+      )
+    }
+
+    fn_call = c(
+      slurm_call,
+      paste0("saveRDS(sjob, '", build_jobname(fn_name, task_ID, suffix = ".RDS"), "')")
+    )
+  } else{
+    fn_call = paste0("saveRDS(", fn_name, "(", paste0(real_parameters, collapse = ", "), "), 'output.RDS')")
+  }
+
 
   if (settings$telegram$enabled){
     fn_str = redirect_print_function_to_telegram(settings, fn_str)
@@ -82,7 +120,7 @@ build_script_and_save = function(settings, fn_local_path, fn_str, real_parameter
     fn_str,
     "",
     "# Import the variables",
-    get_param_imports(settings, real_parameters, task_ID),
+    get_param_imports(settings, real_parameters, task_ID, args),
     "",
     "# Call the function and return the output back",
     fn_call
@@ -103,11 +141,47 @@ get_prefix = function(settings){
   return(prefix)
 }
 
-get_param_imports = function(settings, real_parameters, task_ID){
-  if (length(real_parameters) != 0){
-    return(paste0(real_parameters, " = readRDS('", settings$tmp_paths$hpc, "/", real_parameters, "_", task_ID, ".RDS')"))
+get_param_imports = function(settings, real_parameters, task_ID, args){
+  if (settings$slurm$enabled && settings$slurm$mode == 'parallel'){
+    var_name = names(args)
+    return(paste0(var_name, " = readRDS('", settings$tmp_paths$hpc, "/", var_name, "_", task_ID, ".RDS')"))
   } else {
-    return(c(''))
+    if (length(real_parameters) != 0){
+      return(paste0(real_parameters, " = readRDS('", settings$tmp_paths$hpc, "/", real_parameters, "_", task_ID, ".RDS')"))
+    } else {
+      return(c(''))
+    }
+  }
+}
+
+get_required_packages_from_code = function(fn_str) {
+  library_lines = str_extract(fn_str, "$|\\s+library\\(.+?\\)")
+  library_lines = str_rm_all(str_rm_all(str_rm_all(library_lines[library_lines != ""], "\\s+"), "library\\("), "\\)")
+
+  # an example of a multi_library_definition is library(dplyr, ggplot2)
+  multi_library_definitions = grepl(",", library_lines)
+  multi_lib_idxs = which(multi_library_definitions)
+
+  if (length(multi_lib_idxs) > 0){
+    single_lib_lines = library_lines[!multi_library_definitions]
+    for (idx in multi_lib_idxs){
+      single_lib_lines = c(single_lib_lines, str_split(library_lines[idx], ",")[[1]])
+    }
+    library_lines = single_lib_lines
+  }
+
+  if (length(library_lines) == 0){
+    library_lines = c()
+  }
+
+  return(library_lines)
+}
+
+install_missing_packages = function(settings, fn_str) {
+  package_names = get_required_packages_from_code(fn_str)
+
+  for (pack_name in package_names){
+    install_package_hpc(settings, pack_name, T)
   }
 }
 

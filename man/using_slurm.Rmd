@@ -1,0 +1,84 @@
+---
+title: "Using SLURM"
+output: html_notebook
+---
+
+This implementation of SLURM has two operation modes: execute the whole function on the cluster or parallelize the code on the server.
+
+```{r}
+# Dummy data
+df = data.frame(a = 1:20, b = 21:40)
+
+multiply = function(df){
+  products = c()
+  for (i in 1:nrow(df)){
+    products = c(products, df[i, 1]*df[i, 2])
+  }
+  return(products)
+}
+
+result_normal = multiply(df)
+```
+
+
+**Execute whole function on cluster**
+```{r}
+# Do it the slurm way
+host = 'myHostNameGoesHere'
+overwrite_default = list(
+  slurm = list(
+    enabled = T,
+    mode = 'single',
+  )
+)
+
+settings = connect(host, overwrite_default)
+sjob = run_hpc(settings, multiply, list(df = df))
+Sys.sleep(10) # Wait for SLURM to finish
+result_slurm = receive_output(settings, sjob) # grab the result
+
+if(!identical(result_slurm, result_normal)){
+  stop('Slurm and normal way give different results')
+}
+disconnect(settings)
+```
+
+**Run in parallel on cluster**
+We can do the same, but now in parallel:
+
+```{r}
+overwrite_default$slurm$mode = 'parallel' # change 'single' to 'parallel'
+settings = connect(host, overwrite_default)
+
+# We'll need to adapt the function a bit for parallization
+multiply_row_wise = function(a, b){
+  return(a*b)
+}
+
+sjob_parallel = run_hpc(settings, multiply_row_wise, list(df = df))
+Sys.sleep(10)
+result_slurm_parallel = unlist(receive_output(settings, sjob_parallel))
+if(!identical(result_slurm_parallel, result_normal)){
+  stop('Slurm and normal way give different results')
+}
+disconnect(settings)
+```
+
+**More settings**
+Here I show some more advanced settings
+```{r}
+overwrite_default = list(
+  slurm = list(
+    enabled = T,
+    mode = 'single',
+    nodes = 8, # number of nodes
+    cpus_per_node = 32, # num of cpus per node
+    options = list(
+      partition = 'name_of_partition_you_want_to_use'
+    ),
+    rscript_path = 'my/custom/path/to/Rscript'
+  )
+)
+```
+
+

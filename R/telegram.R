@@ -1,5 +1,4 @@
 add_telegram_functions = function(settings, prefix){
-  # TODO Add general function that adds possiblility to send figures
 
   telegram_prep = function(){
     library(telegram.bot)
@@ -14,30 +13,51 @@ add_telegram_functions = function(settings, prefix){
       )
     }
 
+    telegram_upload_file = function(filename){
+      if (any(grepl('\\/', filename))){
+        path = filename
+      } else{
+        path = paste0(getwd(), '/', filename)
+      }
+
+      if (file.exists(path)){
+        if (file.size(path) < 10000000){
+          command = paste0('curl -v -F "chat_id=', chat_id, '" -F document=@', path, ' https://api.telegram.org/bot', token, '/sendDocument')
+          system(command)
+        } else {
+          telegram_initial_message(paste(filename, "is larger than 10 MB and therefore cannot be uploaded"))
+        }
+      } else {
+        telegram_initial_message(paste(filename, "does not exist and therefore cannot be uploaded"))
+      }
+    }
+
     telegram_initial_message = function(message){
       message = paste0("*", message, "*")
       telegram_send_message(message, F)
     }
 
     telegram_notify = function(type, message, custom_message = NULL){
-      eval_txt = paste0(type, '("', message, '")')
+      if (type %in% c('message', 'warning', 'stop', 'print')){
+        eval_txt = paste0(type, '("', message, '")')
 
-      if (is.null(custom_message)){
-        if (type == 'warning'){
-          message = paste0('Warning: `', message, '`')
+        if (is.null(custom_message)){
+          if (type == 'warning'){
+            message = paste0('Warning: `', message, '`')
+          }
+          else if(type == 'message'){
+            message = paste0('_', message, '_')
+          }
+        } else{
+          message = custom_message
         }
-        else if(type == 'message'){
-          message = paste0('_', message, '_')
-        }
-      } else{
-        message = custom_message
+
+        # Send message
+        telegram_send_message(message)
+
+        # Execute the original
+        eval(parse(text=eval_txt))
       }
-
-      # Send message
-      telegram_send_message(message)
-
-      # Execute the original
-      eval(parse(text=eval_txt))
     }
   }
 

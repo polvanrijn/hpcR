@@ -1,11 +1,16 @@
 library(testthat)
 library(hpcR)
 
-host = Sys.getenv('HOST')
+host = Sys.getenv('SSH_HOST')
 overwrite_default = list(
   telegram = list(
     token = Sys.getenv('TELEGRAM_TOKEN'),
     chat_id = Sys.getenv('TELEGRAM_CHAT_ID')
+  ),
+  tunnel = list(
+    executable = Sys.getenv('SSH_EXECUTABLE'),
+    args = eval(parse(text=Sys.getenv('SSH_TUNNEL_ARGS'))),
+    timeout = 1
   )
 )
 
@@ -44,21 +49,21 @@ data = data.frame(
 ######################################################
 
 test_that("Setup telegram bot", {
-  run_fn(settings, execute_on_server, list(data), download_on_finish = list('test.pdf'))
+  run_hpc(settings, execute_on_server, list(data), download_on_finish = list('test.pdf'))
 })
 
 test_that("Internal errors are passed to telegram", {
   error_fn = function(){
     stop('Stop this bullshit')
   }
-  run_fn(settings, error_fn, list())
+  run_hpc(settings, error_fn, list())
 
   warning_fn = function(){
     warning('Stop this bullshit')
   }
   # Try a warning
-  run_fn(settings, warning_fn, list())
-  run_fn(settings, function(){warning('Inline is possible to')}, list())
+  run_hpc(settings, warning_fn, list())
+  run_hpc(settings, function(){warning('Inline is possible to')}, list())
 })
 
 test_that("External errors/warnings are passed to telegram", {
@@ -66,16 +71,20 @@ test_that("External errors/warnings are passed to telegram", {
   error_fn = function(){
     ggsave()
   }
-  run_fn(settings, error_fn, list())
+  run_hpc(settings, error_fn, list())
 
   # 2) Invoke an external warning
   warning_fn = function(){
     cor( c( 1 , 1 ), c( 2 , 3 ) )
   }
-  run_fn(settings, warning_fn, list())
+  run_hpc(settings, warning_fn, list())
 
   # 3)Also works with inline
-  run_fn(settings, function(){cor( c( 1 , 1 ), c( 2 , 3 ) )}, list())
+  run_hpc(settings, function(){cor( c( 1 , 1 ), c( 2 , 3 ) )}, list())
+})
+
+test_that("Send file to telegram", {
+  run_hpc(settings, function(){telegram_upload_file('test.pdf')}, list())
 })
 
 
@@ -89,8 +98,74 @@ test_that("Install a package on server", {
 
 
 test_that("Send function to server", {
-  out = run_fn(settings, execute_on_server, list(data), download_on_finish = list('test.pdf'))
+  out = run_hpc(settings, execute_on_server, list(data), download_on_finish = list('test.pdf'))
   paste("The function outputted:", out)
+  disconnect(settings)
 })
 
-disconnect(settings)
+test_that("SLURM is working", {
+  host = Sys.getenv('SSH_HOST')
+  overwrite_default = list(
+    telegram = list(
+      token = Sys.getenv('TELEGRAM_TOKEN'),
+      chat_id = Sys.getenv('TELEGRAM_CHAT_ID')
+    ),
+    tunnel = list(
+      executable = Sys.getenv('SSH_EXECUTABLE'),
+      args = eval(parse(text=Sys.getenv('SSH_TUNNEL_ARGS'))),
+      timeout = 1
+    )
+  )
+  settings = connect(host, overwrite_default)
+
+  df = data.frame(a = 1:20, b = 21:40)
+
+  multiply = function(df){
+    products = c()
+    for (i in 1:nrow(df)){
+      products = c(products, df[i, 1]*df[i, 2])
+    }
+    return(products)
+  }
+
+  result_normal = run_hpc(settings, multiply, list(df))
+  disconnect(settings)
+
+  # Do it the slurm way
+  overwrite_default$slurm = list(
+    enabled = T,
+    mode = 'single',
+    nodes = 8,
+    cpus_per_node = 32,
+    options = list(
+      partition = 'octopus'
+    ),
+    rscript_path = 'module use /hpc/shared/EasyBuild/modules/all; module load R; Rscript'
+  )
+
+  settings = connect(host, overwrite_default)
+  sjob = run_hpc(settings, multiply, list(df = df))
+  Sys.sleep(10)
+  result_slurm = receive_output(settings, sjob)
+
+  if(!identical(result_slurm, result_normal)){
+    stop('Slurm and normal way give different results')
+  }
+  disconnect(settings)
+
+  overwrite_default$slurm$mode = 'parallel'
+  settings = connect(host, overwrite_default)
+  multiply_row_wise = function(a, b){
+    return(a*b)
+  }
+
+  sjob_parallel = run_hpc(settings, multiply_row_wise, list(df = df))
+  Sys.sleep(10)
+  result_slurm_parallel = unlist(receive_output(settings, sjob_parallel))
+  if(!identical(result_slurm_parallel, result_normal)){
+    stop('Slurm and normal way give different results')
+  }
+  disconnect(settings)
+})
+
+

@@ -1,7 +1,7 @@
 #####################################
 # HPC high level functions ----------
 
-run_fn = function(settings, fn, args = NULL, download_on_finish = list()){
+run_hpc = function(settings, fn, args = NULL, download_on_finish = list()){
   settings = renew_session(settings)
   if (!is.function(fn)){
     stop("fn must be a function")
@@ -14,29 +14,54 @@ run_fn = function(settings, fn, args = NULL, download_on_finish = list()){
     stop('args must be a list!')
   }
 
+  slurm_parallel = FALSE
+  if (settings$slurm$enabled){
+    if (is.null(names(args))){
+      stop("The rslurm package requires named parameter. Please use a named list as input")
+    }
+
+    if (settings$slurm$mode == 'parallel'){
+      slurm_parallel = TRUE
+      if (!(length(args) == 1 && is.data.frame(args[[1]]))){
+        stop('If you want to use slurm in parallel mode, you need to pass a list containing a single data frame. Each row is used as separate parameters to the function.')
+      }
+    } else if(settings$slurm$mode == 'single'){
+      if (length(args) < 1){
+        stop("The rslurm package requires at least one named parameter")
+      }
+    }
+  }
+
   if (!is.list(download_on_finish)){
     stop('download_on_finish must be a list!')
   }
 
   fn_name = extract_fn_name(fn) # name of the function
   fn_str = deparse(fn) # function as string
+  install_missing_packages(settings, fn_str) # make sure all mentioned libraries are installed on the cluster
+
   real_parameters = compute_real_params(fn_str[1])
 
   # Check if number of parameters match
   real_num_parameters = length(real_parameters)
   if (real_num_parameters != num_parameters){
-    stop("The number of parameters passed to this function must match the function statement")
+    if (!slurm_parallel){
+      stop("The number of parameters passed to this function must match the function statement")
+    }
   }
 
   # In the case of named parameters, check if names match
   if (!is.null(names(args))){
     named_parameters = TRUE
     if (!all(real_parameters %in% names(args))){
-      stop("Named parameters must have exactly the same name as specified in the function")
+      if (!slurm_parallel){
+        stop("Named parameters must have exactly the same name as specified in the function")
+      }
     }
-
-    # change order of parameters so they match the function
-    args = args[real_parameters]
+    if (!slurm_parallel){
+      # change order of parameters so they match the function
+      args = args[real_parameters]
+    }
   } else{
     named_parameters = FALSE
   }
@@ -48,21 +73,18 @@ run_fn = function(settings, fn, args = NULL, download_on_finish = list()){
   # ID for the current task
   task_ID = paste(as.numeric(Sys.time())*10^6)
 
-  if (length(args) > 0){
+  if (length(args) > 0 && !slurm_parallel){
     for (i in 1:length(args)){
       param_name = real_parameters[i]
-
-      # Save RDS locally
-      RDS_path_local = build_path(settings$tmp_paths$local, paste0(param_name, ".RDS"))
-      RDS_path_hpc = build_path(settings$tmp_paths$hpc, paste0(param_name, "_", task_ID, ".RDS"))
-
       if (named_parameters){
-        saveRDS(args[[param_name]], RDS_path_local)
+        identifier = param_name
       } else{
-        saveRDS(args[[i]], RDS_path_local)
+        identifier = i
       }
-      upload_and_delete(settings, RDS_path_local, RDS_path_hpc)
+      save_upload_and_delete(settings, identifier, param_name, task_ID, args)
     }
+  } else if (slurm_parallel){
+    save_upload_and_delete(settings, names(args), names(args), task_ID, args)
   }
 
   # Save function to file
@@ -70,7 +92,7 @@ run_fn = function(settings, fn, args = NULL, download_on_finish = list()){
   fn_local_path = build_path(settings$tmp_paths$local, "/temp.R")
 
   # Build the script
-  build_script_and_save(settings, fn_local_path, fn_str, real_parameters, fn_name, task_ID)
+  build_script_and_save(settings, fn_local_path, fn_str, real_parameters, fn_name, task_ID, args)
 
   # Upload and delete file locally
   upload_and_delete(settings, fn_local_path, fn_hpc_path)
@@ -83,8 +105,13 @@ run_fn = function(settings, fn, args = NULL, download_on_finish = list()){
   #  exec(settings, cmd)
   #}
 
-
-  download(settings, paste0(settings$tmp_paths$hpc, "/output.RDS"), settings$tmp_paths$local)
+  if (settings$slurm$enabled){
+    # Avoid being thrown out
+    RDS_file = build_jobname(fn_name, task_ID, suffix = '.RDS')
+  } else{
+    RDS_file = 'output.RDS'
+  }
+  download(settings, paste0(settings$tmp_paths$hpc, "/", RDS_file), settings$tmp_paths$local)
 
   # download the results from the server
   if(length(download_on_finish) > 0){
@@ -97,7 +124,7 @@ run_fn = function(settings, fn, args = NULL, download_on_finish = list()){
     message(paste(paste(filenames, collapse = ', '), "have been downloaded to:", settings$tmp_paths$download))
   }
 
-  return(readRDS(paste0(settings$tmp_paths$local,"/output.RDS")))
+  return(readRDS(paste0(settings$tmp_paths$local, "/", RDS_file)))
 }
 
 
@@ -136,7 +163,15 @@ create_remote_tmp = function(settings){
   )
 }
 
+save_upload_and_delete = function(settings, identifier, param_name, task_ID, args){
+  # Save RDS locally
+  RDS_path_local = build_path(settings$tmp_paths$local, paste0(param_name, ".RDS"))
+  RDS_path_hpc = build_path(settings$tmp_paths$hpc, paste0(param_name, "_", task_ID, ".RDS"))
 
+  saveRDS(args[[identifier]], RDS_path_local)
+
+  upload_and_delete(settings, RDS_path_local, RDS_path_hpc)
+}
 
 upload_and_delete = function(settings, from, to){
   # Upload
@@ -171,15 +206,21 @@ download = function(settings, files, to = settings$tmp_paths$local){
   ssh::scp_download(settings$session, files, to, verbose = settings$debug)
 }
 
-install_package_hpc = function(settings, package_name){
+install_package_hpc = function(settings, package_name, silent = F){
   raw = exec(settings, paste0("R -e '!require(\"", package_name, "\")'"))
   out = extract_output(raw)
   if (out[1]){
-    message(paste(package_name, "is not installed yet, so let's install it"))
+    if (!silent){
+      message(paste(package_name, "is not installed yet, so let's install it"))
+    }
     ssh::ssh_exec_wait(settings$session, paste0("R -e 'install.packages(\"", package_name, "\", repos=\"http://cran.us.r-project.org\")'"))
-    message(paste(package_name, "is now installed on the server"))
+    if (!silent){
+      message(paste(package_name, "is now installed on the server"))
+    }
   } else {
-    message(paste(package_name, "is already installed on the server"))
+    if (!silent){
+      message(paste(package_name, "is already installed on the server"))
+    }
   }
 }
 

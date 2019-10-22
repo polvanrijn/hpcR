@@ -3,15 +3,20 @@ title: "Setting up SSH"
 output: html_notebook
 ---
 
-In order to use the package you'll need ssh access with `R` installed on the server. Sometimes on hpc you can't directly ssh into your workspace, but need to chain ssh sessions. Chaining ssh sessions within the package `ssh` is not possible. This is a `R`-package we use in order to work with R over ssh. A workaround is to build a tunnel.
+In order to use the package you'll need ssh access with `R` installed on the server. Sometimes on hpc you can't directly ssh into your workspace, but need to chain ssh sessions. Chaining ssh sessions within the package `ssh` is not possible. This is a `R`-package we use in order to work with R over ssh. To go around this issue we'll first build a tunnel and use this instead.
 
-Let's imagine the following scenario, you have your own computer (`hostA`), you can connect to your workspace (`hostB`) and only from your workspace you can connect to the hpc cluster (`hostC`). In order to setup the tunnel `hostA -> hostB -> hostC`, we'll need to do the following. Create the file `config`
+Let's imagine the following scenario, you have your own computer (`hostA`), you can connect to your workspace on the cluster (`hostB`) and only from your workspace you can connect to the hpc cluster (`hostC`). In order to setup the tunnel `hostA -> hostB -> hostC`, we'll need to do the following:
 
+**Step 1** Create the file `config`
+
+Type this into your terminal
 ```{r}
 nano ~/.ssh/config
 ```
 
-In many cases this file does not exist yet. Now type in the following:
+In many cases this file does not exist yet. 
+
+**Step 2** Add and edit the following lines to your configuration
 
 ```{r}
 Host hostC # You could pick any name, e.g. 'Host hpc_server'
@@ -21,24 +26,44 @@ Host hostC # You could pick any name, e.g. 'Host hpc_server'
     ProxyCommand ssh username_hostB@hostB -W %h:%p # this is where the magic happens ;-) You first login to hostB and then into hostC
 ```
 
-The next step is to create a file containing our ssh passwords; this makes life way easier! To do so run
+**Step 3** Create a keygen for ssh
+This step is optional, but if you don't want to use it, you'll need to remove the IdentityFile line from the config file. However, I strongly recommend to put your ssh password into the keygen. If you want to do so paste this into the terminal
 
 ```{r}
 ssh-keygen -t rsa -b 2048 # This creates a keygen for ssh (rsa protected)
 ```
 
-Automatically the keygen is saved in `~/.ssh/id_rsa`, however you may use any other location (however, you'll need to change the location of `IdentityFile` in `~/.ssh/config`). Next, you'll be prompted to enter a password, if you just press enter, no password is used. I recommend this for scripting, because otherwise you'll need to reenter your ssh keygen password each time you run.
+Automatically the keygen is saved in `~/.ssh/id_rsa`, however you may use any other location. Please not that, you'll need to change the location of `IdentityFile` in `~/.ssh/config`). Next, you'll be prompted to enter a password, if you just press enter, no password is used. I recommend this for scripting, because otherwise you'll need to reenter your ssh keygen password each time you run.
 
+**Step 4** Add ssh to keygen
 In order to add the ssh key to the keygen run:
 
 ```{r}
 ssh-copy-id username_hostB@hostB
 ```
 
-Now everything is set up. Let's run the tunnel, by entering:
+**Step 5** Launch tunnel
+You may either setup a tunnel using a terminal, by entering:
 
 ```{r}
 ssh -L 5902:localhost:22 -N hostC
 ```
 
-This creates connects `localhost` on port 5902 to `hostC` on port 22. The hostname you'll need to use in this package is therefore `username_hostB@localhost:5902`
+Or you use the build in tunnel management in `hpcR`. You can easily do so by
+
+```{r}
+library(hpcR)
+host = 'username_hostB@localhost:5902' # hostname
+overwrite_default = list(
+  tunnel = list(
+    executable = '/usr/bin/ssh', # path to the ssh executable
+    args = c('-L', '5902:localhost:22', '-N', 'hostC'), # arguments to setup the tunnel
+    timeout = 1 # if it could not connect, it will try again in 1 second
+  )
+)
+```
+
+Both versions of the same code connect `localhost` on port 5902 to `hostC` on port 22. The hostname you'll need to use in this package is therefore `username_hostB@localhost:5902`
+
+
+

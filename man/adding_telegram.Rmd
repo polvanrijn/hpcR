@@ -1,0 +1,55 @@
+---
+title: "Telegram integration"
+output: html_notebook
+---
+
+**Step 1** Create a telegram bot
+To do so, follow steps [here](https://core.telegram.org/bots#6-botfather)
+
+**Step 2** Find your chat ID
+To make it work, you'll need an access TOKEN (it should look something like `123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11`). The next step is to find your chat ID. Open your bot in Telegram and hit `\start`. Now run the following code:
+
+```{r}
+# Initialize bot
+token = 'my token goes here'
+bot <- Bot(token = token)
+
+# Retrieve your chat id
+# Note: you should text the bot before calling `getUpdates` (you do this by running \start)
+chat_id = bot$getUpdates()[[1L]]$from_chat_id()
+
+print(chat_id) # Note this down
+```
+
+**Step 3** Run hpc with live Telegram updates
+
+
+```{r}
+host = 'myHostNameGoesHere'
+overwrite_default = list(
+  telegram = list(
+    token = 'my Telegram token goes here',
+    chat_id = 'my Chat bot chat ID goes here'
+    # Optionally you can set the following parameters:
+    # output_types = c('print', 'message'), # this are statements in your code, that are redirected to Telegram
+    # redirect_print = T, # if this is true the statements are redirected
+    # send_on_start = T, # Send a message when the script starts
+    # send_on_finish = T, # Send a message when the script ends
+    # silence_unimportant_msg = T # Warnings, messages or simple print messages are sent silently, so you'll receive no alert
+  )
+)
+settings = connect(host, overwrite_default)
+```
+
+**Step 4** Send files to Telegram
+
+If you run a function on your server you can also send files to Telegram, for example a plot of your code
+
+```{r}
+my_telegram_function = function(){
+  telegram_upload_file('my_plot.pdf')
+}
+
+run_hpc(settings, my_telegram_function, list())
+```
+
