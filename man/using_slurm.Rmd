@@ -1,6 +1,8 @@
 ---
 title: "Using SLURM"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 This implementation of SLURM has two operation modes: execute the whole function on the cluster or parallelize the code on the server.
