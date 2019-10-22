@@ -65,7 +65,8 @@ disconnect(settings)
 ```
 
 **More settings**
-Here I show some more advanced settings
+Here I show some more advanced settings. If you want to use `rscript_path` please use `rslurm` from [here](https://github.com/polvanrijn/rslurm) or run `devtools:install_github("polvanrijn/rslurm")` on the hpc cluster.
+
 ```{r}
 overwrite_default = list(
   slurm = list(
