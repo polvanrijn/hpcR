@@ -1,5 +1,4 @@
-
-extract_output = function(raw_response){
+process_console_output = function(raw_response){
   outputs = str_extract(raw_response, "\\[\\d+\\] .+?\n")
   outputs = str_rm_all(str_rm_all(outputs, '\n'), '\\[\\d+\\] ')
   eval_output = c()
@@ -9,8 +8,7 @@ extract_output = function(raw_response){
   return(eval_output)
 }
 
-
-compute_real_params = function(l){
+read_parameter_names_from_function = function(l){
   start_idx = stringr::str_locate(l, "\\(")[1]
   end_idx = stringr::str_locate(l, "\\)")[1]
 
@@ -34,7 +32,7 @@ compute_real_params = function(l){
   }
 }
 
-extract_fn_name = function(fn){
+read_function_name = function(fn){
   fn_name = substitute(fn)
   if (length(fn_name) == 1){
     return(fn_name)
@@ -51,6 +49,7 @@ build_path = function(dir, filename){
   return(paste0(path, filename))
 }
 
+# TODO remove, it is never used
 evaluate = function(string){
   return(eval(parse(text=string)))
 }
@@ -79,6 +78,7 @@ build_script_and_save = function(settings, fn_local_path, fn_str, real_parameter
   # writeLines(script_r, file.path(tmpdir, "slurm_run.R"))
 
   if (settings$slurm$enabled){
+    rscript_path = paste0(settings$slurm$r_path, "script")
     pkgs = get_required_packages_from_code(fn_str)
     jobname = build_jobname(fn_name, task_ID)
     slurm_call = c("library(rslurm)")
@@ -86,7 +86,7 @@ build_script_and_save = function(settings, fn_local_path, fn_str, real_parameter
       slurm_call = c(
         slurm_call,
         paste("pars", names(args), sep = " = "),
-        paste0("sjob = slurm_apply(", fn_name, ", pars, jobname = '", jobname, "', nodes = ", settings$slurm$nodes, ", cpus_per_node = ", settings$slurm$cpus_per_node, ", pkgs = ", deparse(pkgs), ", slurm_options = ", deparse(settings$slurm$options), ", rscript_path = ", deparse(settings$slurm$rscript_path), ")")
+        paste0("sjob = slurm_apply(", fn_name, ", pars, jobname = '", jobname, "', nodes = ", settings$slurm$nodes, ", cpus_per_node = ", settings$slurm$cpus_per_node, ", pkgs = ", deparse(pkgs), ", slurm_options = ", deparse(settings$slurm$options), ", rscript_path = ", deparse(rscript_path), ")")
       )
     } else if(settings$slurm$mode == 'single'){
       # You get something like:
@@ -94,7 +94,7 @@ build_script_and_save = function(settings, fn_local_path, fn_str, real_parameter
       slurm_call = c(
         slurm_call,
         paste0("pars = list(", paste(real_parameters, real_parameters, sep = " = ", collapse = ", "), ")"),
-        paste0("sjob = slurm_call(", fn_name, ", pars, jobname = '", jobname, "', pkgs = ", deparse(pkgs), ", slurm_options = ", deparse(settings$slurm$options), ", rscript_path = ", deparse(settings$slurm$rscript_path), ")")
+        paste0("sjob = slurm_call(", fn_name, ", pars, jobname = '", jobname, "', pkgs = ", deparse(pkgs), ", slurm_options = ", deparse(settings$slurm$options), ", rscript_path = ", deparse(rscript_path), ")")
       )
     }
 
@@ -108,8 +108,10 @@ build_script_and_save = function(settings, fn_local_path, fn_str, real_parameter
 
 
   if (settings$telegram$enabled){
-    fn_str = redirect_print_function_to_telegram(settings, fn_str)
-    fn_call = add_telegram_try_catch(settings, fn_call)
+    fn_str = redirect_print_function_to_telegram(settings, fn_str, task_ID)
+    if (!settings$slurm$enabled){
+      fn_call = add_telegram_try_catch(settings, fn_call)
+    }
   }
 
   script = c(
@@ -134,7 +136,7 @@ build_script_and_save = function(settings, fn_local_path, fn_str, real_parameter
 get_prefix = function(settings){
   prefix = c(paste0('setwd("', settings$tmp_paths$hpc, '")'))
 
-  if (settings$telegram$enabled){
+  if (settings$telegram$enabled && !settings$slurm$enabled){
     prefix = add_telegram_functions(settings, prefix)
   }
 
@@ -177,16 +179,14 @@ get_required_packages_from_code = function(fn_str) {
   return(library_lines)
 }
 
-install_missing_packages = function(settings, fn_str) {
-  package_names = get_required_packages_from_code(fn_str)
-
-  for (pack_name in package_names){
-    install_package_hpc(settings, pack_name, T)
+insert_before = function(arr, new_val, idx){
+  if (!is.character(arr)){
+    stop('Needs to be a character array')
   }
-}
 
-get_fn_call = function(){
-
+  before = arr[1:(idx - 1)]
+  after = arr[idx:length(arr)]
+  return(c(before, new_val, after))
 }
 
 ## String operations

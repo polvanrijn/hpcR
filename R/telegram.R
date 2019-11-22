@@ -1,3 +1,4 @@
+# Rename all functions to telegram_*, e.g. telegram_add_functions
 add_telegram_functions = function(settings, prefix){
 
   telegram_prep = function(){
@@ -90,14 +91,14 @@ add_telegram_try_catch = function(settings, fn_call){
     "})"
   )
 
-  if (settings$telegram$send_on_start){
+  if (settings$telegram$send_on_start && !settings$slurm$enabled){
     fn_call = c(
       "telegram_initial_message('Script started')",
       fn_call
     )
   }
 
-  if (settings$telegram$send_on_finish){
+  if (settings$telegram$send_on_finish && !settings$slurm$enabled){
     fn_call = c(
       fn_call,
       "telegram_initial_message('Script finished')"
@@ -107,12 +108,54 @@ add_telegram_try_catch = function(settings, fn_call){
   return(fn_call)
 }
 
-redirect_print_function_to_telegram = function(settings, fn_str){
+redirect_print_function_to_telegram = function(settings, fn_str, task_ID){
   if (settings$telegram$redirect_print){
     for (type in settings$telegram$output_types){
       fn_str = stringr::str_replace_all(fn_str, paste0("\\s+", type, "\\(|^", type, "\\("), paste0("telegram_notify('", type, "', "))
     }
   }
+
+  if (settings$slurm$enabled){
+    head_fn = fn_str[1:2]
+    middle_fn = fn_str[3:(length(fn_str) - 1)]
+    if (settings$slurm$enabled){
+      middle_fn = add_telegram_try_catch(settings, middle_fn)
+    }
+    bottom_fn = fn_str[length(fn_str)]
+
+    lines = c(head_fn)
+
+    if (settings$telegram$enabled){
+      lines = c(lines, add_telegram_functions(settings, ''))
+    }
+    if (settings$telegram$send_on_start){
+      lines = c(lines, paste0("telegram_initial_message('SLURM job (", task_ID, ") started')"))
+    }
+
+    lines = c(lines, middle_fn)
+
+    if (settings$telegram$send_on_finish){
+      msg = paste0("telegram_initial_message('SLURM job (", task_ID, ") ended')")
+      idx_returns = grep("return\\(.+?\\)", lines)
+      if (length(idx_returns) > 0){
+        for (idx in idx_returns){
+          return_stm = lines[idx]
+          padding = ''
+          if (substr(return_stm, 1,1) == " "){
+            padding = stringr::str_extract(return_stm, "\\s+")
+          }
+          msg = paste0(padding, msg)
+          lines = insert_before(lines, msg, idx)
+        }
+      } else{
+        lines = c(lines, msg)
+      }
+    }
+
+    lines = c(lines, bottom_fn)
+    fn_str = lines
+  }
+
   return(fn_str)
 }
 

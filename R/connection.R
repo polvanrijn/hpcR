@@ -6,14 +6,22 @@ connect = function(host, overwrite_default = list()){
   settings = set_settings(host, overwrite_default)
 
   # (Re)Create folder
-  create_remote_tmp(settings)
+  hpc_create_tmp_folder(settings)
 
   # Return settings
   return(settings)
 }
 
 
-disconnect = function(settings){
+disconnect = function(settings = NULL){
+  if (is.null(settings)){
+    if ("settings" %in% ls(envir = .GlobalEnv)) {
+      settings = get("settings", envir = .GlobalEnv)
+    } else {
+      stop('The variable settings does not exist')
+    }
+  }
+
   settings = renew_session(settings)
 
   ssh::ssh_disconnect(settings$session)
@@ -29,6 +37,8 @@ disconnect = function(settings){
       message('Already disconnected from tunnel')
     }
   }
+  objs = ls(pos = ".GlobalEnv")
+  rm(list = objs[grep("settings", objs)], pos = ".GlobalEnv")
 }
 
 renew_session = function(settings){
@@ -74,7 +84,8 @@ renew_session = function(settings){
   if (reconnect){
     # If we need to create session
     stop_loop = F
-    for (try in 1:5){
+    num_tries = 5
+    for (try in 1:num_tries){
       tryCatch(
         {
           settings$session = ssh::ssh_connect(settings$host)
@@ -84,7 +95,6 @@ renew_session = function(settings){
           }
         },
         error = function(e){
-          message(paste('Could not connect, try again in', settings$tunnel$timeout, 'seconds'))
           Sys.sleep(settings$tunnel$timeout)
         }
       )
@@ -93,8 +103,10 @@ renew_session = function(settings){
       }
     }
 
-    if (try == 5){
-      stop('Could not connect to tunnel')
+    if (try == num_tries){
+      stop(paste('Could not connect, tried', num_tries, 'times with a delay of each', settings$tunnel$timeout, 'seconds'))
+    } else{
+      message("Connected to new session")
     }
   }
 
@@ -136,7 +148,7 @@ set_settings = function(host, overwrite_default = list(), settings = list(
     options = list(),
     nodes = 2,
     cpus_per_node = 2,
-    rscript_path = NULL
+    r_path = 'R'
   )
 )){
   settings$host = host
@@ -197,9 +209,9 @@ set_settings = function(host, overwrite_default = list(), settings = list(
   # Do some checks
   # TELEGRAM
   if (!is.null(settings$telegram$token) && !is.null(settings$telegram$chat_id)){
-    for (package_name in c('telegram.bot')){
-      install_package_hpc(settings, package_name, T)
-    }
+    #for (package_name in c('telegram.bot')){
+    #  hpc_install_package(settings, package_name, T)
+    #}
     settings$telegram$enabled = TRUE
   } else{
     if (is.null(settings$telegram$token)){
@@ -211,7 +223,7 @@ set_settings = function(host, overwrite_default = list(), settings = list(
 
   # SLURM
   if (settings$slurm$enabled){
-    install_package_hpc(settings, 'rslurm', T)
+    # hpc_install_package(settings, 'rslurm', T)
 
     if (!settings$slurm$mode %in% c('parallel', 'single')){
       stop('Only supported modes are "parallel" executing parameters from dataframe in parallel or "single" just running a function on slurm cluster.')

@@ -50,6 +50,6 @@ my_telegram_function = function(){
   telegram_upload_file('my_plot.pdf')
 }
 
-run_hpc(settings, my_telegram_function, list())
+hpc_run(settings, my_telegram_function, list())
 ```
 

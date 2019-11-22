@@ -18,7 +18,7 @@ test_that("Connection", {
   # First make sure the ssh is working, e.g.:
   # ssh -L 5902:localhost:22 -N hpc
   settings = connect(host, overwrite_default)
-  disconnect(settings)
+  disconnect()
 })
 
 settings = connect(host, overwrite_default)
@@ -49,21 +49,21 @@ data = data.frame(
 ######################################################
 
 test_that("Setup telegram bot", {
-  run_hpc(settings, execute_on_server, list(data), download_on_finish = list('test.pdf'))
+  hpc_run(settings, execute_on_server, list(data), download_on_finish = list('test.pdf'))
 })
 
 test_that("Internal errors are passed to telegram", {
   error_fn = function(){
     stop('Stop this bullshit')
   }
-  run_hpc(settings, error_fn, list())
+  hpc_run(settings, error_fn, list())
 
   warning_fn = function(){
     warning('Stop this bullshit')
   }
   # Try a warning
-  run_hpc(settings, warning_fn, list())
-  run_hpc(settings, function(){warning('Inline is possible to')}, list())
+  hpc_run(settings, warning_fn, list())
+  hpc_run(settings, function(){warning('Inline is possible to')}, list())
 })
 
 test_that("External errors/warnings are passed to telegram", {
@@ -71,34 +71,34 @@ test_that("External errors/warnings are passed to telegram", {
   error_fn = function(){
     ggsave()
   }
-  run_hpc(settings, error_fn, list())
+  hpc_run(settings, error_fn, list())
 
   # 2) Invoke an external warning
   warning_fn = function(){
     cor( c( 1 , 1 ), c( 2 , 3 ) )
   }
-  run_hpc(settings, warning_fn, list())
+  hpc_run(settings, warning_fn, list())
 
   # 3)Also works with inline
-  run_hpc(settings, function(){cor( c( 1 , 1 ), c( 2 , 3 ) )}, list())
+  hpc_run(settings, function(){cor( c( 1 , 1 ), c( 2 , 3 ) )}, list())
 })
 
 test_that("Send file to telegram", {
-  run_hpc(settings, function(){telegram_upload_file('test.pdf')}, list())
+  hpc_run(settings, function(){telegram_upload_file('test.pdf')}, list())
 })
 
 
 test_that("Temp can be removed", {
-  empty_remote_tmp(settings)
+  hpc_clear_tmp_folder(settings)
 })
 
 test_that("Install a package on server", {
-  install_package_hpc(settings, 'dplyr')
+  hpc_install_package(settings, 'dplyr')
 })
 
 
 test_that("Send function to server", {
-  out = run_hpc(settings, execute_on_server, list(data), download_on_finish = list('test.pdf'))
+  out = hpc_run(settings, execute_on_server, list(data), download_on_finish = list('test.pdf'))
   paste("The function outputted:", out)
   disconnect(settings)
 })
@@ -128,7 +128,7 @@ test_that("SLURM is working", {
     return(products)
   }
 
-  result_normal = run_hpc(settings, multiply, list(df))
+  result_normal = hpc_run(settings, multiply, list(df))
   disconnect(settings)
 
   # Do it the slurm way
@@ -140,11 +140,11 @@ test_that("SLURM is working", {
     options = list(
       partition = 'octopus'
     ),
-    rscript_path = 'module use /hpc/shared/EasyBuild/modules/all; module load R; Rscript'
+    r_path = 'module use /hpc/shared/EasyBuild/modules/all; module load R; R'
   )
 
   settings = connect(host, overwrite_default)
-  sjob = run_hpc(settings, multiply, list(df = df))
+  sjob = hpc_run(settings, multiply, list(df = df))
   Sys.sleep(10)
   result_slurm = receive_output(settings, sjob)
 
@@ -159,7 +159,7 @@ test_that("SLURM is working", {
     return(a*b)
   }
 
-  sjob_parallel = run_hpc(settings, multiply_row_wise, list(df = df))
+  sjob_parallel = hpc_run(settings, multiply_row_wise, list(df = df))
   Sys.sleep(10)
   result_slurm_parallel = unlist(receive_output(settings, sjob_parallel))
   if(!identical(result_slurm_parallel, result_normal)){

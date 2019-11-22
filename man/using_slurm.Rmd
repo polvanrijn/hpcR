@@ -35,7 +35,7 @@ overwrite_default = list(
 )
 
 settings = connect(host, overwrite_default)
-sjob = run_hpc(settings, multiply, list(df = df))
+sjob = hpc_run(settings, multiply, list(df = df))
 Sys.sleep(10) # Wait for SLURM to finish
 result_slurm = receive_output(settings, sjob) # grab the result
 
@@ -57,7 +57,7 @@ multiply_row_wise = function(a, b){
   return(a*b)
 }
 
-sjob_parallel = run_hpc(settings, multiply_row_wise, list(df = df))
+sjob_parallel = hpc_run(settings, multiply_row_wise, list(df = df))
 Sys.sleep(10)
 result_slurm_parallel = unlist(receive_output(settings, sjob_parallel))
 if(!identical(result_slurm_parallel, result_normal)){
