@@ -81,7 +81,7 @@ build_script_and_save = function(fn_local_path, fn_str, real_parameters, fn_name
     rscript_path = paste0(settings$slurm$r_path, "script")
     pkgs = get_required_packages_from_code(fn_str)
     jobname = build_jobname(fn_name, task_ID)
-    slurm_call = c("packrat::init('~/tmp/')", "library(rslurm)")
+    slurm_call = c("library(rslurm)")
     if (settings$slurm$mode == 'parallel') {
       slurm_call = c(
         slurm_call,
