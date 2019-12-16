@@ -68,7 +68,7 @@ reindent_code = function(lines, indentation_level = 0){
   return(lines)
 }
 
-build_script_and_save = function(settings, fn_local_path, fn_str, real_parameters, fn_name, task_ID, args){
+build_script_and_save = function(fn_local_path, fn_str, real_parameters, fn_name, task_ID, args, settings = NULL) {
   # TODO use a templating engine, e.g.
   # template_r <- readLines(system.file("templates/slurm_run_R.txt",
   #                                     package = "rslurm"))
@@ -76,19 +76,19 @@ build_script_and_save = function(settings, fn_local_path, fn_str, real_parameter
   #                                                      add_obj = !is.null(add_objects), nchunk = nchunk, cpus_per_node = cpus_per_node,
   #                                                      libPaths = libPaths))
   # writeLines(script_r, file.path(tmpdir, "slurm_run.R"))
-
-  if (settings$slurm$enabled){
+  settings = get_settings(settings = settings)
+  if (settings$slurm$enabled) {
     rscript_path = paste0(settings$slurm$r_path, "script")
     pkgs = get_required_packages_from_code(fn_str)
     jobname = build_jobname(fn_name, task_ID)
-    slurm_call = c("library(rslurm)")
-    if (settings$slurm$mode == 'parallel'){
+    slurm_call = c("packrat::init('~/tmp/')", "library(rslurm)")
+    if (settings$slurm$mode == 'parallel') {
       slurm_call = c(
         slurm_call,
         paste("pars", names(args), sep = " = "),
         paste0("sjob = slurm_apply(", fn_name, ", pars, jobname = '", jobname, "', nodes = ", settings$slurm$nodes, ", cpus_per_node = ", settings$slurm$cpus_per_node, ", pkgs = ", deparse(pkgs), ", slurm_options = ", deparse(settings$slurm$options), ", rscript_path = ", deparse(rscript_path), ")")
       )
-    } else if(settings$slurm$mode == 'single'){
+    } else if (settings$slurm$mode == 'single'){
       # You get something like:
       # pars = list(a = a, b = b)
       slurm_call = c(
@@ -107,9 +107,9 @@ build_script_and_save = function(settings, fn_local_path, fn_str, real_parameter
   }
 
 
-  if (settings$telegram$enabled){
+  if (settings$telegram$enabled) {
     fn_str = redirect_print_function_to_telegram(settings, fn_str, task_ID)
-    if (!settings$slurm$enabled){
+    if (!settings$slurm$enabled) {
       fn_call = add_telegram_try_catch(settings, fn_call)
     }
   }
@@ -122,7 +122,7 @@ build_script_and_save = function(settings, fn_local_path, fn_str, real_parameter
     fn_str,
     "",
     "# Import the variables",
-    get_param_imports(settings, real_parameters, task_ID, args),
+    get_param_imports(real_parameters, task_ID, args, settings = settings),
     "",
     "# Call the function and return the output back",
     fn_call
@@ -133,22 +133,24 @@ build_script_and_save = function(settings, fn_local_path, fn_str, real_parameter
   close(fileConn)
 }
 
-get_prefix = function(settings){
+get_prefix = function(settings = NULL){
+  settings = get_settings(settings = settings)
   prefix = c(paste0('setwd("', settings$tmp_paths$hpc, '")'))
 
-  if (settings$telegram$enabled && !settings$slurm$enabled){
+  if (settings$telegram$enabled && !settings$slurm$enabled) {
     prefix = add_telegram_functions(settings, prefix)
   }
 
   return(prefix)
 }
 
-get_param_imports = function(settings, real_parameters, task_ID, args){
-  if (settings$slurm$enabled && settings$slurm$mode == 'parallel'){
+get_param_imports = function(real_parameters, task_ID, args, settings = NULL){
+  settings = get_settings(settings = settings)
+  if (settings$slurm$enabled && settings$slurm$mode == 'parallel') {
     var_name = names(args)
     return(paste0(var_name, " = readRDS('", settings$tmp_paths$hpc, "/", var_name, "_", task_ID, ".RDS')"))
   } else {
-    if (length(real_parameters) != 0){
+    if (length(real_parameters) != 0) {
       return(paste0(real_parameters, " = readRDS('", settings$tmp_paths$hpc, "/", real_parameters, "_", task_ID, ".RDS')"))
     } else {
       return(c(''))

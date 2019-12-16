@@ -34,15 +34,15 @@ overwrite_default = list(
   )
 )
 
-settings = connect(host, overwrite_default)
-sjob = hpc_run(settings, multiply, list(df = df))
+connect(host, overwrite_default)
+sjob = hpc_run(multiply, list(df = df))
 Sys.sleep(10) # Wait for SLURM to finish
-result_slurm = receive_output(settings, sjob) # grab the result
+result_slurm = receive_output(sjob) # grab the result
 
-if(!identical(result_slurm, result_normal)){
+if (!identical(result_slurm, result_normal)){
   stop('Slurm and normal way give different results')
 }
-disconnect(settings)
+disconnect()
 ```
 
 **Run in parallel on cluster**
@@ -50,20 +50,20 @@ We can do the same, but now in parallel:
 
 ```{r}
 overwrite_default$slurm$mode = 'parallel' # change 'single' to 'parallel'
-settings = connect(host, overwrite_default)
+connect(host, overwrite_default)
 
 # We'll need to adapt the function a bit for parallization
 multiply_row_wise = function(a, b){
   return(a*b)
 }
 
-sjob_parallel = hpc_run(settings, multiply_row_wise, list(df = df))
+sjob_parallel = hpc_run(multiply_row_wise, list(df = df))
 Sys.sleep(10)
-result_slurm_parallel = unlist(receive_output(settings, sjob_parallel))
+result_slurm_parallel = unlist(receive_output(sjob_parallel))
 if(!identical(result_slurm_parallel, result_normal)){
   stop('Slurm and normal way give different results')
 }
-disconnect(settings)
+disconnect()
 ```
 
 **More settings**

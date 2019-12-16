@@ -9,7 +9,7 @@ overwrite_default = list(
   ),
   tunnel = list(
     executable = Sys.getenv('SSH_EXECUTABLE'),
-    args = eval(parse(text=Sys.getenv('SSH_TUNNEL_ARGS'))),
+    args = strsplit(Sys.getenv('SSH_TUNNEL_ARGS'), ",")[[1]],
     timeout = 1
   )
 )
@@ -17,11 +17,11 @@ overwrite_default = list(
 test_that("Connection", {
   # First make sure the ssh is working, e.g.:
   # ssh -L 5902:localhost:22 -N hpc
-  settings = connect(host, overwrite_default)
+  connect(host, overwrite_default)
   disconnect()
 })
 
-settings = connect(host, overwrite_default)
+connect(host, overwrite_default)
 
 ## Define some function that will be recycled ------
 execute_on_server = function(data){
@@ -49,21 +49,21 @@ data = data.frame(
 ######################################################
 
 test_that("Setup telegram bot", {
-  hpc_run(settings, execute_on_server, list(data), download_on_finish = list('test.pdf'))
+  hpc_run(execute_on_server, list(data), download_on_finish = list('test.pdf'))
 })
 
 test_that("Internal errors are passed to telegram", {
   error_fn = function(){
     stop('Stop this bullshit')
   }
-  hpc_run(settings, error_fn, list())
+  hpc_run(error_fn, list())
 
   warning_fn = function(){
     warning('Stop this bullshit')
   }
   # Try a warning
-  hpc_run(settings, warning_fn, list())
-  hpc_run(settings, function(){warning('Inline is possible to')}, list())
+  hpc_run(warning_fn, list())
+  hpc_run(function(){warning('Inline is possible to')}, list())
 })
 
 test_that("External errors/warnings are passed to telegram", {
@@ -71,36 +71,36 @@ test_that("External errors/warnings are passed to telegram", {
   error_fn = function(){
     ggsave()
   }
-  hpc_run(settings, error_fn, list())
+  hpc_run(error_fn, list())
 
   # 2) Invoke an external warning
   warning_fn = function(){
     cor( c( 1 , 1 ), c( 2 , 3 ) )
   }
-  hpc_run(settings, warning_fn, list())
+  hpc_run(warning_fn, list())
 
   # 3)Also works with inline
-  hpc_run(settings, function(){cor( c( 1 , 1 ), c( 2 , 3 ) )}, list())
+  hpc_run(function(){cor( c( 1 , 1 ), c( 2 , 3 ) )}, list())
 })
 
 test_that("Send file to telegram", {
-  hpc_run(settings, function(){telegram_upload_file('test.pdf')}, list())
+  hpc_run(function(){telegram_upload_file('test.pdf')}, list())
 })
 
 
 test_that("Temp can be removed", {
-  hpc_clear_tmp_folder(settings)
+  hpc_clear_tmp_folder()
 })
 
 test_that("Install a package on server", {
-  hpc_install_package(settings, 'dplyr')
+  hpc_install_CRAN_package('dplyr')
 })
 
 
 test_that("Send function to server", {
-  out = hpc_run(settings, execute_on_server, list(data), download_on_finish = list('test.pdf'))
+  out = hpc_run(execute_on_server, list(data), download_on_finish = list('test.pdf'))
   paste("The function outputted:", out)
-  disconnect(settings)
+  disconnect()
 })
 
 test_that("SLURM is working", {
@@ -112,11 +112,11 @@ test_that("SLURM is working", {
     ),
     tunnel = list(
       executable = Sys.getenv('SSH_EXECUTABLE'),
-      args = eval(parse(text=Sys.getenv('SSH_TUNNEL_ARGS'))),
+      args = strsplit(Sys.getenv('SSH_TUNNEL_ARGS'), ",")[[1]],
       timeout = 1
     )
   )
-  settings = connect(host, overwrite_default)
+  connect(host, overwrite_default)
 
   df = data.frame(a = 1:20, b = 21:40)
 
@@ -128,8 +128,8 @@ test_that("SLURM is working", {
     return(products)
   }
 
-  result_normal = hpc_run(settings, multiply, list(df))
-  disconnect(settings)
+  result_normal = hpc_run(multiply, list(df))
+  disconnect()
 
   # Do it the slurm way
   overwrite_default$slurm = list(
@@ -143,29 +143,29 @@ test_that("SLURM is working", {
     r_path = 'module use /hpc/shared/EasyBuild/modules/all; module load R; R'
   )
 
-  settings = connect(host, overwrite_default)
-  sjob = hpc_run(settings, multiply, list(df = df))
+  connect(host, overwrite_default)
+  sjob = hpc_run(multiply, list(df = df))
   Sys.sleep(10)
-  result_slurm = receive_output(settings, sjob)
+  result_slurm = receive_output(sjob)
 
   if(!identical(result_slurm, result_normal)){
     stop('Slurm and normal way give different results')
   }
-  disconnect(settings)
+  disconnect()
 
   overwrite_default$slurm$mode = 'parallel'
-  settings = connect(host, overwrite_default)
+  connect(host, overwrite_default)
   multiply_row_wise = function(a, b){
     return(a*b)
   }
 
-  sjob_parallel = hpc_run(settings, multiply_row_wise, list(df = df))
+  sjob_parallel = hpc_run(multiply_row_wise, list(df = df))
   Sys.sleep(10)
-  result_slurm_parallel = unlist(receive_output(settings, sjob_parallel))
+  result_slurm_parallel = unlist(receive_output(sjob_parallel))
   if(!identical(result_slurm_parallel, result_normal)){
     stop('Slurm and normal way give different results')
   }
-  disconnect(settings)
+  disconnect()
 })
 
 

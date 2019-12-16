@@ -1753,37 +1753,25 @@ summary {
 <p><strong>Step 2</strong> Find your chat ID To make it work, you’ll need an access TOKEN (it should look something like <code>123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11</code>). The next step is to find your chat ID. Open your bot in Telegram and hit <code>\start</code>. Now run the following code:</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIyBJbml0aWFsaXplIGJvdFxudG9rZW4gPSAnbXkgdG9rZW4gZ29lcyBoZXJlJ1xuYm90IDwtIEJvdCh0b2tlbiA9IHRva2VuKVxuXG4jIFJldHJpZXZlIHlvdXIgY2hhdCBpZFxuIyBOb3RlOiB5b3Ugc2hvdWxkIHRleHQgdGhlIGJvdCBiZWZvcmUgY2FsbGluZyBgZ2V0VXBkYXRlc2AgKHlvdSBkbyB0aGlzIGJ5IHJ1bm5pbmcgXFxzdGFydClcbmNoYXRfaWQgPSBib3QkZ2V0VXBkYXRlcygpW1sxTF1dJGZyb21fY2hhdF9pZCgpXG5cbnByaW50KGNoYXRfaWQpICMgTm90ZSB0aGlzIGRvd25cbmBgYCJ9 -->
-<pre class="r"><code># Initialize bot
-token = 'my token goes here'
-bot &lt;- Bot(token = token)
-
-# Retrieve your chat id
-# Note: you should text the bot before calling `getUpdates` (you do this by running \start)
-chat_id = bot$getUpdates()[[1L]]$from_chat_id()
-
-print(chat_id) # Note this down</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYGBgclxuIyBJbml0aWFsaXplIGJvdFxudG9rZW4gPSAnbXkgdG9rZW4gZ29lcyBoZXJlJ1xuYm90IDwtIEJvdCh0b2tlbiA9IHRva2VuKVxuXG4jIFJldHJpZXZlIHlvdXIgY2hhdCBpZFxuIyBOb3RlOiB5b3Ugc2hvdWxkIHRleHQgdGhlIGJvdCBiZWZvcmUgY2FsbGluZyBgZ2V0VXBkYXRlc2AgKHlvdSBkbyB0aGlzIGJ5IHJ1bm5pbmcgXFxzdGFydClcbmNoYXRfaWQgPSBib3QkZ2V0VXBkYXRlcygpW1sxTF1dJGZyb21fY2hhdF9pZCgpXG5cbnByaW50KGNoYXRfaWQpICMgTm90ZSB0aGlzIGRvd25cbmBgYFxuYGBgIn0= -->
+<p><code>r</code>r # Initialize bot token = ‘my token goes here’ bot &lt;- Bot(token = token)</p>
+<div id="retrieve-your-chat-id" class="section level1">
+<h1>Retrieve your chat id</h1>
+</div>
+<div id="note-you-should-text-the-bot-before-calling-getupdates-you-do-this-by-running" class="section level1">
+<h1>Note: you should text the bot before calling <code>getUpdates</code> (you do this by running )</h1>
+<p>chat_id = bot<span class="math inline">\(getUpdates()[[1L]]\)</span>from_chat_id()</p>
+<p>print(chat_id) # Note this down</p>
+<pre><code></code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <p><strong>Step 3</strong> Run hpc with live Telegram updates</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuaG9zdCA9ICdteUhvc3ROYW1lR29lc0hlcmUnXG5vdmVyd3JpdGVfZGVmYXVsdCA9IGxpc3QoXG4gIHRlbGVncmFtID0gbGlzdChcbiAgICB0b2tlbiA9ICdteSBUZWxlZ3JhbSB0b2tlbiBnb2VzIGhlcmUnLFxuICAgIGNoYXRfaWQgPSAnbXkgQ2hhdCBib3QgY2hhdCBJRCBnb2VzIGhlcmUnXG4gICAgIyBPcHRpb25hbGx5IHlvdSBjYW4gc2V0IHRoZSBmb2xsb3dpbmcgcGFyYW1ldGVyczpcbiAgICAjIG91dHB1dF90eXBlcyA9IGMoJ3ByaW50JywgJ21lc3NhZ2UnKSwgIyB0aGlzIGFyZSBzdGF0ZW1lbnRzIGluIHlvdXIgY29kZSwgdGhhdCBhcmUgcmVkaXJlY3RlZCB0byBUZWxlZ3JhbVxuICAgICMgcmVkaXJlY3RfcHJpbnQgPSBULCAjIGlmIHRoaXMgaXMgdHJ1ZSB0aGUgc3RhdGVtZW50cyBhcmUgcmVkaXJlY3RlZFxuICAgICMgc2VuZF9vbl9zdGFydCA9IFQsICMgU2VuZCBhIG1lc3NhZ2Ugd2hlbiB0aGUgc2NyaXB0IHN0YXJ0c1xuICAgICMgc2VuZF9vbl9maW5pc2ggPSBULCAjIFNlbmQgYSBtZXNzYWdlIHdoZW4gdGhlIHNjcmlwdCBlbmRzXG4gICAgIyBzaWxlbmNlX3VuaW1wb3J0YW50X21zZyA9IFQgIyBXYXJuaW5ncywgbWVzc2FnZXMgb3Igc2ltcGxlIHByaW50IG1lc3NhZ2VzIGFyZSBzZW50IHNpbGVudGx5LCBzbyB5b3UnbGwgcmVjZWl2ZSBubyBhbGVydFxuICApXG4pXG5zZXR0aW5ncyA9IGNvbm5lY3QoaG9zdCwgb3ZlcndyaXRlX2RlZmF1bHQpXG5gYGAifQ== -->
-<pre class="r"><code>host = 'myHostNameGoesHere'
-overwrite_default = list(
-  telegram = list(
-    token = 'my Telegram token goes here',
-    chat_id = 'my Chat bot chat ID goes here'
-    # Optionally you can set the following parameters:
-    # output_types = c('print', 'message'), # this are statements in your code, that are redirected to Telegram
-    # redirect_print = T, # if this is true the statements are redirected
-    # send_on_start = T, # Send a message when the script starts
-    # send_on_finish = T, # Send a message when the script ends
-    # silence_unimportant_msg = T # Warnings, messages or simple print messages are sent silently, so you'll receive no alert
-  )
-)
-settings = connect(host, overwrite_default)</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYGBgclxuaG9zdCA9ICdteUhvc3ROYW1lR29lc0hlcmUnXG5vdmVyd3JpdGVfZGVmYXVsdCA9IGxpc3QoXG4gIHRlbGVncmFtID0gbGlzdChcbiAgICB0b2tlbiA9ICdteSBUZWxlZ3JhbSB0b2tlbiBnb2VzIGhlcmUnLFxuICAgIGNoYXRfaWQgPSAnbXkgQ2hhdCBib3QgY2hhdCBJRCBnb2VzIGhlcmUnXG4gICAgIyBPcHRpb25hbGx5IHlvdSBjYW4gc2V0IHRoZSBmb2xsb3dpbmcgcGFyYW1ldGVyczpcbiAgICAjIG91dHB1dF90eXBlcyA9IGMoJ3ByaW50JywgJ21lc3NhZ2UnKSwgIyB0aGlzIGFyZSBzdGF0ZW1lbnRzIGluIHlvdXIgY29kZSwgdGhhdCBhcmUgcmVkaXJlY3RlZCB0byBUZWxlZ3JhbVxuICAgICMgcmVkaXJlY3RfcHJpbnQgPSBULCAjIGlmIHRoaXMgaXMgdHJ1ZSB0aGUgc3RhdGVtZW50cyBhcmUgcmVkaXJlY3RlZFxuICAgICMgc2VuZF9vbl9zdGFydCA9IFQsICMgU2VuZCBhIG1lc3NhZ2Ugd2hlbiB0aGUgc2NyaXB0IHN0YXJ0c1xuICAgICMgc2VuZF9vbl9maW5pc2ggPSBULCAjIFNlbmQgYSBtZXNzYWdlIHdoZW4gdGhlIHNjcmlwdCBlbmRzXG4gICAgIyBzaWxlbmNlX3VuaW1wb3J0YW50X21zZyA9IFQgIyBXYXJuaW5ncywgbWVzc2FnZXMgb3Igc2ltcGxlIHByaW50IG1lc3NhZ2VzIGFyZSBzZW50IHNpbGVudGx5LCBzbyB5b3UnbGwgcmVjZWl2ZSBubyBhbGVydFxuICApXG4pXG5zZXR0aW5ncyA9IGNvbm5lY3QoaG9zdCwgb3ZlcndyaXRlX2RlZmF1bHQpXG5gYGBcbmBgYCJ9 -->
+<p><code>r</code>r host = ‘myHostNameGoesHere’ overwrite_default = list( telegram = list( token = ‘my Telegram token goes here’, chat_id = ‘my Chat bot chat ID goes here’ # Optionally you can set the following parameters: # output_types = c(‘print’, ‘message’), # this are statements in your code, that are redirected to Telegram # redirect_print = T, # if this is true the statements are redirected # send_on_start = T, # Send a message when the script starts # send_on_finish = T, # Send a message when the script ends # silence_unimportant_msg = T # Warnings, messages or simple print messages are sent silently, so you’ll receive no alert ) ) settings = connect(host, overwrite_default)</p>
+<pre><code></code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
@@ -1791,18 +1779,17 @@ settings = connect(host, overwrite_default)</code></pre>
 <p>If you run a function on your server you can also send files to Telegram, for example a plot of your code</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubXlfdGVsZWdyYW1fZnVuY3Rpb24gPSBmdW5jdGlvbigpe1xuICB0ZWxlZ3JhbV91cGxvYWRfZmlsZSgnbXlfcGxvdC5wZGYnKVxufVxuXG5ocGNfcnVuKHNldHRpbmdzLCBteV90ZWxlZ3JhbV9mdW5jdGlvbiwgbGlzdCgpKVxuYGBgIn0= -->
-<pre class="r"><code>my_telegram_function = function(){
-  telegram_upload_file('my_plot.pdf')
-}
-
-hpc_run(settings, my_telegram_function, list())</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYGBgclxubXlfdGVsZWdyYW1fZnVuY3Rpb24gPSBmdW5jdGlvbigpe1xuICB0ZWxlZ3JhbV91cGxvYWRfZmlsZSgnbXlfcGxvdC5wZGYnKVxufVxuXG5ocGNfcnVuKHNldHRpbmdzLCBteV90ZWxlZ3JhbV9mdW5jdGlvbiwgbGlzdCgpKVxuYGBgXG5gYGAifQ== -->
+<p><code>r</code>r my_telegram_function = function(){ telegram_upload_file(‘my_plot.pdf’) }</p>
+<p>hpc_run(settings, my_telegram_function, list())</p>
+<pre><code></code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
+</div>
 
-<div id="rmd-source-code">LS0tCnRpdGxlOiAiVGVsZWdyYW0gaW50ZWdyYXRpb24iCm91dHB1dDogaHRtbF9ub3RlYm9vawotLS0KCioqU3RlcCAxKiogQ3JlYXRlIGEgdGVsZWdyYW0gYm90ClRvIGRvIHNvLCBmb2xsb3cgc3RlcHMgW2hlcmVdKGh0dHBzOi8vY29yZS50ZWxlZ3JhbS5vcmcvYm90cyM2LWJvdGZhdGhlcikKCioqU3RlcCAyKiogRmluZCB5b3VyIGNoYXQgSUQKVG8gbWFrZSBpdCB3b3JrLCB5b3UnbGwgbmVlZCBhbiBhY2Nlc3MgVE9LRU4gKGl0IHNob3VsZCBsb29rIHNvbWV0aGluZyBsaWtlIGAxMjM0NTY6QUJDLURFRjEyMzRnaElrbC16eXg1N1cydjF1MTIzZXcxMWApLiBUaGUgbmV4dCBzdGVwIGlzIHRvIGZpbmQgeW91ciBjaGF0IElELiBPcGVuIHlvdXIgYm90IGluIFRlbGVncmFtIGFuZCBoaXQgYFxzdGFydGAuIE5vdyBydW4gdGhlIGZvbGxvd2luZyBjb2RlOgoKYGBge3J9CiMgSW5pdGlhbGl6ZSBib3QKdG9rZW4gPSAnbXkgdG9rZW4gZ29lcyBoZXJlJwpib3QgPC0gQm90KHRva2VuID0gdG9rZW4pCgojIFJldHJpZXZlIHlvdXIgY2hhdCBpZAojIE5vdGU6IHlvdSBzaG91bGQgdGV4dCB0aGUgYm90IGJlZm9yZSBjYWxsaW5nIGBnZXRVcGRhdGVzYCAoeW91IGRvIHRoaXMgYnkgcnVubmluZyBcc3RhcnQpCmNoYXRfaWQgPSBib3QkZ2V0VXBkYXRlcygpW1sxTF1dJGZyb21fY2hhdF9pZCgpCgpwcmludChjaGF0X2lkKSAjIE5vdGUgdGhpcyBkb3duCmBgYAoKKipTdGVwIDMqKiBSdW4gaHBjIHdpdGggbGl2ZSBUZWxlZ3JhbSB1cGRhdGVzCgoKYGBge3J9Cmhvc3QgPSAnbXlIb3N0TmFtZUdvZXNIZXJlJwpvdmVyd3JpdGVfZGVmYXVsdCA9IGxpc3QoCiAgdGVsZWdyYW0gPSBsaXN0KAogICAgdG9rZW4gPSAnbXkgVGVsZWdyYW0gdG9rZW4gZ29lcyBoZXJlJywKICAgIGNoYXRfaWQgPSAnbXkgQ2hhdCBib3QgY2hhdCBJRCBnb2VzIGhlcmUnCiAgICAjIE9wdGlvbmFsbHkgeW91IGNhbiBzZXQgdGhlIGZvbGxvd2luZyBwYXJhbWV0ZXJzOgogICAgIyBvdXRwdXRfdHlwZXMgPSBjKCdwcmludCcsICdtZXNzYWdlJyksICMgdGhpcyBhcmUgc3RhdGVtZW50cyBpbiB5b3VyIGNvZGUsIHRoYXQgYXJlIHJlZGlyZWN0ZWQgdG8gVGVsZWdyYW0KICAgICMgcmVkaXJlY3RfcHJpbnQgPSBULCAjIGlmIHRoaXMgaXMgdHJ1ZSB0aGUgc3RhdGVtZW50cyBhcmUgcmVkaXJlY3RlZAogICAgIyBzZW5kX29uX3N0YXJ0ID0gVCwgIyBTZW5kIGEgbWVzc2FnZSB3aGVuIHRoZSBzY3JpcHQgc3RhcnRzCiAgICAjIHNlbmRfb25fZmluaXNoID0gVCwgIyBTZW5kIGEgbWVzc2FnZSB3aGVuIHRoZSBzY3JpcHQgZW5kcwogICAgIyBzaWxlbmNlX3VuaW1wb3J0YW50X21zZyA9IFQgIyBXYXJuaW5ncywgbWVzc2FnZXMgb3Igc2ltcGxlIHByaW50IG1lc3NhZ2VzIGFyZSBzZW50IHNpbGVudGx5LCBzbyB5b3UnbGwgcmVjZWl2ZSBubyBhbGVydAogICkKKQpzZXR0aW5ncyA9IGNvbm5lY3QoaG9zdCwgb3ZlcndyaXRlX2RlZmF1bHQpCmBgYAoKKipTdGVwIDQqKiBTZW5kIGZpbGVzIHRvIFRlbGVncmFtCgpJZiB5b3UgcnVuIGEgZnVuY3Rpb24gb24geW91ciBzZXJ2ZXIgeW91IGNhbiBhbHNvIHNlbmQgZmlsZXMgdG8gVGVsZWdyYW0sIGZvciBleGFtcGxlIGEgcGxvdCBvZiB5b3VyIGNvZGUKCmBgYHtyfQpteV90ZWxlZ3JhbV9mdW5jdGlvbiA9IGZ1bmN0aW9uKCl7CiAgdGVsZWdyYW1fdXBsb2FkX2ZpbGUoJ215X3Bsb3QucGRmJykKfQoKaHBjX3J1bihzZXR0aW5ncywgbXlfdGVsZWdyYW1fZnVuY3Rpb24sIGxpc3QoKSkKYGBgCgo=</div>
+<div id="rmd-source-code">LS0tCnRpdGxlOiAiVGVsZWdyYW0gaW50ZWdyYXRpb24iCm91dHB1dDogaHRtbF9ub3RlYm9vawotLS0KCioqU3RlcCAxKiogQ3JlYXRlIGEgdGVsZWdyYW0gYm90ClRvIGRvIHNvLCBmb2xsb3cgc3RlcHMgW2hlcmVdKGh0dHBzOi8vY29yZS50ZWxlZ3JhbS5vcmcvYm90cyM2LWJvdGZhdGhlcikKCioqU3RlcCAyKiogRmluZCB5b3VyIGNoYXQgSUQKVG8gbWFrZSBpdCB3b3JrLCB5b3UnbGwgbmVlZCBhbiBhY2Nlc3MgVE9LRU4gKGl0IHNob3VsZCBsb29rIHNvbWV0aGluZyBsaWtlIGAxMjM0NTY6QUJDLURFRjEyMzRnaElrbC16eXg1N1cydjF1MTIzZXcxMWApLiBUaGUgbmV4dCBzdGVwIGlzIHRvIGZpbmQgeW91ciBjaGF0IElELiBPcGVuIHlvdXIgYm90IGluIFRlbGVncmFtIGFuZCBoaXQgYFxzdGFydGAuIE5vdyBydW4gdGhlIGZvbGxvd2luZyBjb2RlOgoKYGBge3J9CiMgSW5pdGlhbGl6ZSBib3QKdG9rZW4gPSAnbXkgdG9rZW4gZ29lcyBoZXJlJwpib3QgPC0gQm90KHRva2VuID0gdG9rZW4pCgojIFJldHJpZXZlIHlvdXIgY2hhdCBpZAojIE5vdGU6IHlvdSBzaG91bGQgdGV4dCB0aGUgYm90IGJlZm9yZSBjYWxsaW5nIGBnZXRVcGRhdGVzYCAoeW91IGRvIHRoaXMgYnkgcnVubmluZyBcc3RhcnQpCmNoYXRfaWQgPSBib3QkZ2V0VXBkYXRlcygpW1sxTF1dJGZyb21fY2hhdF9pZCgpCgpwcmludChjaGF0X2lkKSAjIE5vdGUgdGhpcyBkb3duCmBgYAoKKipTdGVwIDMqKiBSdW4gaHBjIHdpdGggbGl2ZSBUZWxlZ3JhbSB1cGRhdGVzCgoKYGBge3J9Cmhvc3QgPSAnbXlIb3N0TmFtZUdvZXNIZXJlJwpvdmVyd3JpdGVfZGVmYXVsdCA9IGxpc3QoCiAgdGVsZWdyYW0gPSBsaXN0KAogICAgdG9rZW4gPSAnbXkgVGVsZWdyYW0gdG9rZW4gZ29lcyBoZXJlJywKICAgIGNoYXRfaWQgPSAnbXkgQ2hhdCBib3QgY2hhdCBJRCBnb2VzIGhlcmUnCiAgICAjIE9wdGlvbmFsbHkgeW91IGNhbiBzZXQgdGhlIGZvbGxvd2luZyBwYXJhbWV0ZXJzOgogICAgIyBvdXRwdXRfdHlwZXMgPSBjKCdwcmludCcsICdtZXNzYWdlJyksICMgdGhpcyBhcmUgc3RhdGVtZW50cyBpbiB5b3VyIGNvZGUsIHRoYXQgYXJlIHJlZGlyZWN0ZWQgdG8gVGVsZWdyYW0KICAgICMgcmVkaXJlY3RfcHJpbnQgPSBULCAjIGlmIHRoaXMgaXMgdHJ1ZSB0aGUgc3RhdGVtZW50cyBhcmUgcmVkaXJlY3RlZAogICAgIyBzZW5kX29uX3N0YXJ0ID0gVCwgIyBTZW5kIGEgbWVzc2FnZSB3aGVuIHRoZSBzY3JpcHQgc3RhcnRzCiAgICAjIHNlbmRfb25fZmluaXNoID0gVCwgIyBTZW5kIGEgbWVzc2FnZSB3aGVuIHRoZSBzY3JpcHQgZW5kcwogICAgIyBzaWxlbmNlX3VuaW1wb3J0YW50X21zZyA9IFQgIyBXYXJuaW5ncywgbWVzc2FnZXMgb3Igc2ltcGxlIHByaW50IG1lc3NhZ2VzIGFyZSBzZW50IHNpbGVudGx5LCBzbyB5b3UnbGwgcmVjZWl2ZSBubyBhbGVydAogICkKKQpjb25uZWN0KGhvc3QsIG92ZXJ3cml0ZV9kZWZhdWx0KQpgYGAKCioqU3RlcCA0KiogU2VuZCBmaWxlcyB0byBUZWxlZ3JhbQoKSWYgeW91IHJ1biBhIGZ1bmN0aW9uIG9uIHlvdXIgc2VydmVyIHlvdSBjYW4gYWxzbyBzZW5kIGZpbGVzIHRvIFRlbGVncmFtLCBmb3IgZXhhbXBsZSBhIHBsb3Qgb2YgeW91ciBjb2RlCgpgYGB7cn0KbXlfdGVsZWdyYW1fZnVuY3Rpb24gPSBmdW5jdGlvbigpewogIHRlbGVncmFtX3VwbG9hZF9maWxlKCdteV9wbG90LnBkZicpCn0KCmhwY19ydW4oc2V0dGluZ3MsIG15X3RlbGVncmFtX2Z1bmN0aW9uLCBsaXN0KCkpCmBgYAoK</div>
 
 
 

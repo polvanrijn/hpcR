@@ -38,7 +38,7 @@ overwrite_default = list(
     # silence_unimportant_msg = T # Warnings, messages or simple print messages are sent silently, so you'll receive no alert
   )
 )
-settings = connect(host, overwrite_default)
+connect(host, overwrite_default)
 ```
 
 **Step 4** Send files to Telegram

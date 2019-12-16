@@ -1,5 +1,6 @@
 # TODO Rename to slurm_receive_output
-receive_output = function(settings, sjob, prettyname = NULL){
+receive_output = function(sjob, prettyname = NULL, settings = NULL){
+  settings = get_settings(settings = settings)
   jobname = to_job_name(sjob)
 
   if (is.null(prettyname)){
@@ -23,7 +24,7 @@ receive_output = function(settings, sjob, prettyname = NULL){
   settings$telegram$send_on_start = F
   settings$telegram$send_on_finish = F
   tryCatch({
-    out = hpc_run(settings, output_fn, list(jobname = jobname))
+    out = hpc_run(output_fn, list(jobname = jobname), settings = settings)
     message(paste("Downloaded", prettyname))
   }, error = function(er){
     warning(er)
@@ -44,31 +45,36 @@ to_job_name = function(sjob){
   return(jobname)
 }
 
-slurm_send = function(){
+slurm_send = function(settings = NULL){
+  settings = get_settings(settings = settings)
   # mirror of hpc_run
 }
 
-slurm_result = function(settings, sjob){
-  if (slurm_finished(settings, sjob)){
-    hpc_copy_from(settings, paste0(get_slurm_dir(settings, sjob), '/results_0.RDS'))
+slurm_result = function(sjob, settings = NULL){
+  settings = get_settings(settings = settings)
+  if (slurm_finished(sjob, settings = settings)) {
+    hpc_copy_from(paste0(get_slurm_dir(sjob, settings = settings), '/results_0.RDS'), settings = settings)
     return(readRDS(paste0(settings$tmp_paths$local, '/results_0.RDS')))
   } else {
     warning('Result not finished!')
   }
 }
 
-slurm_finished = function(settings, sjob){
-  path = paste0(get_slurm_dir(settings, sjob), '/results_0.RDS')
-  return(hpc_path_exists(settings, path))
+slurm_finished = function(sjob, settings = NULL){
+  settings = get_settings(settings = settings)
+  path = paste0(get_slurm_dir(sjob, settings = settings), '/results_0.RDS')
+  return(hpc_path_exists(path, settings = settings))
 }
 
-slurm_launch_script = function(settings, sjob){
-  hpc_copy_from(settings, paste0(get_slurm_dir(settings, sjob), '/slurm_run.R'))
+slurm_launch_script = function(sjob, settings = NULL){
+  settings = get_settings(settings = settings)
+  hpc_copy_from(paste0(get_slurm_dir(sjob, settings = settings), '/slurm_run.R'), settings = settings)
   file.edit(paste0(settings$tmp_paths$local, '/slurm_run.R'))
 }
 
-slurm_code = function(settings, sjob){
-  hpc_copy_from(settings, paste0(get_slurm_dir(settings, sjob), '/f.RDS'))
+slurm_code = function(sjob, settings = NULL){
+  settings = get_settings(settings = settings)
+  hpc_copy_from(paste0(get_slurm_dir(sjob, settings = settings), '/f.RDS'), settings = settings)
   readRDS(paste0(settings$tmp_paths$local, '/f.RDS'))
   f_name_code = paste0(settings$tmp_paths$local, '/slurm_code.R')
   f = file(f_name_code)
@@ -77,7 +83,8 @@ slurm_code = function(settings, sjob){
   file.edit(f_name_code)
 }
 
-slurm_status = function(settings, sjob = NULL, follow = T){
+slurm_status = function(sjob = NULL, follow = T, settings = NULL){
+  settings = get_settings(settings = settings)
   # If NULL reply with sqeue
   # else show output function
   if (is.null(sjob)) {
@@ -91,16 +98,18 @@ slurm_status = function(settings, sjob = NULL, follow = T){
     if (follow) {
       cmd = 'tail -f '
     }
-    cmd = paste0(cmd, ' ',get_slurm_dir(settings, sjob), '/slurm_0.out')
+    cmd = paste0(cmd, ' ', get_slurm_dir(sjob, settings = settings), '/slurm_0.out')
   }
-  hpc_execute(settings, cmd, live_output = T)
+  hpc_execute(cmd, live_output = T, settings = settings)
 }
 
-slurm_kill = function(settings, jobid){
-  hpc_execute(settings, paste('scancel', jobid), live_output = T)
+slurm_kill = function(jobid, settings = NULL){
+  settings = get_settings(settings = settings)
+  hpc_execute(paste('scancel', jobid), live_output = T, settings = settings)
 }
 
-slurm_knit = function(path){
+slurm_knit = function(path, settings = NULL){
+  settings = get_settings(settings = settings)
   # TODO: first check if it contains setwd --> reject such files
   # TODO: Fetch files from *.read('...,  *.read(", readRDS(... and transmit to server
   # TODO: make sure knitr and rmarkdown are installed on server
@@ -111,7 +120,8 @@ build_jobname = function(fn_name, task_ID, suffix = ''){
   return(paste0(paste("slurmjob", fn_name, task_ID, sep = "_"), suffix))
 }
 
-get_slurm_dir = function(settings, sjob){
+get_slurm_dir = function(sjob, settings = NULL){
+  settings = get_settings(settings = settings)
   jobname = to_job_name(sjob)
   return(paste0(settings$tmp_paths$hpc, '/_rslurm_',jobname))
 }

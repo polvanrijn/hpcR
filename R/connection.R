@@ -1,28 +1,35 @@
 #####################################
 # Connection functions --------------
 
-connect = function(host, overwrite_default = list()){
+connect = function(host, overwrite_default = list(), settings_name = "settings"){
+  if (settings_object_exist(settings_name)) {
+    message("Old connection already exist")
+    tryCatch({
+      empty_tunnel = is.null(settings$tunnel$process)
+      if (!empty_tunnel) {
+        old_settings = get(settings_name, envir = .GlobalEnv)
+        disconnect(old_settings)
+      } else {
+        remove_settings_object(settings_name, settings)
+      }
+    }, error = function(ex){
+      remove_settings_object(settings_name, settings)
+    })
+
+  }
   # Setup settings
   settings = set_settings(host, overwrite_default)
 
   # (Re)Create folder
   hpc_create_tmp_folder(settings)
 
-  # Return settings
-  return(settings)
+  # Asign settings to global variable
+  assign(settings_name, settings, envir = .GlobalEnv)
 }
 
 
-disconnect = function(settings = NULL){
-  if (is.null(settings)){
-    if ("settings" %in% ls(envir = .GlobalEnv)) {
-      settings = get("settings", envir = .GlobalEnv)
-    } else {
-      stop('The variable settings does not exist')
-    }
-  }
-
-  settings = renew_session(settings)
+disconnect = function(settings_name = "settings", settings = NULL){
+  settings = get_settings(settings = settings)
 
   ssh::ssh_disconnect(settings$session)
 
@@ -37,8 +44,33 @@ disconnect = function(settings = NULL){
       message('Already disconnected from tunnel')
     }
   }
+  remove_settings_object(settings_name, settings)
+}
+
+settings_object_exist = function(settings_name = "settings"){
   objs = ls(pos = ".GlobalEnv")
-  rm(list = objs[grep("settings", objs)], pos = ".GlobalEnv")
+  return(length(objs[grep(settings_name, objs)]) == 1)
+}
+
+remove_settings_object = function(settings_name = "settings", settings = NULL){
+  objs = ls(pos = ".GlobalEnv")
+  rm(list = objs[grep(settings_name, objs)], pos = ".GlobalEnv")
+}
+
+get_settings = function(renew_session_connection = T, settings = NULL){
+  if (is.null(settings)) {
+    if (settings_object_exist()) {
+      settings = get("settings", envir = .GlobalEnv)
+    } else {
+      stop('No connection active')
+    }
+  }
+
+  if (renew_session_connection) {
+    settings = renew_session(settings)
+  }
+
+  return(settings)
 }
 
 renew_session = function(settings){
@@ -84,7 +116,7 @@ renew_session = function(settings){
   if (reconnect){
     # If we need to create session
     stop_loop = F
-    num_tries = 5
+    num_tries = 50
     for (try in 1:num_tries){
       tryCatch(
         {
@@ -210,7 +242,7 @@ set_settings = function(host, overwrite_default = list(), settings = list(
   # TELEGRAM
   if (!is.null(settings$telegram$token) && !is.null(settings$telegram$chat_id)){
     #for (package_name in c('telegram.bot')){
-    #  hpc_install_package(settings, package_name, T)
+    #  hpc_install_CRAN_package(package_name, T, settings = settings)
     #}
     settings$telegram$enabled = TRUE
   } else{
@@ -223,7 +255,7 @@ set_settings = function(host, overwrite_default = list(), settings = list(
 
   # SLURM
   if (settings$slurm$enabled){
-    # hpc_install_package(settings, 'rslurm', T)
+    # hpc_install_CRAN_package('rslurm', T, settings = settings)
 
     if (!settings$slurm$mode %in% c('parallel', 'single')){
       stop('Only supported modes are "parallel" executing parameters from dataframe in parallel or "single" just running a function on slurm cluster.')
